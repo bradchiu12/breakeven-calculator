@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>損益平衡點計算機｜月退手續費試算</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --desk: #182420;
+    --desk-dark: #101a17;
+    --paper: #FBFAF2;
+    --paper-bar: #DEEEDD;
+    --rule: #9FC0A2;
+    --rule-strong: #6E9273;
+    --ink: #1E2B22;
+    --ink-soft: #587260;
+    --stamp: #B03A2E;
+    --forest: #2C6B45;
+    --brass: #8C6E33;
+    --font-serif: 'Noto Serif TC', serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 50% -10%, #24352f 0%, var(--desk) 55%, var(--desk-dark) 100%);
+    font-family: var(--font-serif);
+    color: var(--ink);
+    display:flex;
+    justify-content:center;
+    padding: 48px 16px 80px;
+  }
+
+  .sheet-wrap{
+    width:100%;
+    max-width: 660px;
+  }
+
+  .perf{
+    height:14px;
+    background-image: radial-gradient(circle, var(--desk-dark) 3.5px, transparent 3.6px);
+    background-size: 22px 14px;
+    background-position: 0 center;
+    opacity:.9;
+  }
+  .perf.top{ border-radius: 6px 6px 0 0; }
+  .perf.bottom{ border-radius: 0 0 6px 6px; }
+
+  .sheet{
+    background:
+      repeating-linear-gradient(
+        to bottom,
+        var(--paper) 0px, var(--paper) 30px,
+        var(--paper-bar) 30px, var(--paper-bar) 60px
+      );
+    padding: 40px 34px 34px;
+    box-shadow: 0 30px 60px -25px rgba(0,0,0,.55);
+    position:relative;
+  }
+  .sheet::before, .sheet::after{
+    content:"";
+    position:absolute;
+    top:0; bottom:0;
+    width:10px;
+    background-image: radial-gradient(circle, var(--desk-dark) 2.6px, transparent 2.8px);
+    background-size: 10px 22px;
+    opacity:.35;
+  }
+  .sheet::before{ left:6px; }
+  .sheet::after{ right:6px; }
+
+  header.masthead{
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 14px;
+    margin-bottom: 26px;
+  }
+  header.masthead h1{
+    margin:0 0 8px;
+    font-size: 1.5rem;
+    font-weight:700;
+    letter-spacing: .02em;
+  }
+  header.masthead p{
+    margin:0;
+    font-size:.92rem;
+    line-height:1.65;
+    color: var(--ink-soft);
+    max-width: 54ch;
+  }
+
+  fieldset{
+    border:none;
+    padding:0;
+    margin: 0 0 26px;
+  }
+  legend{
+    font-size:1rem;
+    font-weight:600;
+    padding:0 0 6px;
+    border-bottom: 1px dashed var(--rule-strong);
+    width:100%;
+    margin-bottom:14px;
+  }
+
+  .row{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap: 16px;
+    padding: 9px 0;
+    border-bottom: 1px dotted var(--rule);
+  }
+  .row:last-child{ border-bottom:none; }
+  .row label{
+    font-size:.94rem;
+    line-height:1.5;
+  }
+  .row .hint{
+    display:block;
+    font-size:.76rem;
+    color: var(--ink-soft);
+    margin-top:2px;
+  }
+  .field{
+    display:flex;
+    align-items:baseline;
+    gap:6px;
+    flex-shrink:0;
+  }
+  .field .unit{
+    font-family: var(--font-mono);
+    font-size:.86rem;
+    color: var(--ink-soft);
+  }
+
+  input[type="number"], input[type="text"], select{
+    font-family: var(--font-mono);
+    font-size: .98rem;
+    text-align:right;
+    width: 108px;
+    padding: 5px 6px;
+    background: transparent;
+    border: none;
+    border-bottom: 1.5px solid var(--ink);
+    color: var(--ink);
+  }
+  select{ text-align:left; width:auto; min-width:150px; }
+  input[type="text"]{ text-align:left; width:150px; }
+  input:focus, select:focus{
+    outline: 2px solid var(--forest);
+    outline-offset: 2px;
+    background: rgba(44,107,69,.06);
+  }
+  input:disabled{ color: #9aa79f; border-color:#c8d4c9; }
+
+  .checkline{
+    display:flex; align-items:center; gap:8px;
+  }
+  .checkline input[type="checkbox"]{
+    width:16px; height:16px; accent-color: var(--forest);
+  }
+
+  .results{
+    margin-top: 8px;
+    padding-top: 6px;
+  }
+  .results h2{
+    font-size:1.05rem;
+    margin: 0 0 16px;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 8px;
+  }
+
+  .line{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    padding: 8px 0;
+    border-bottom: 1px dotted var(--rule);
+    font-size:.94rem;
+    gap: 12px;
+  }
+  .line .val{
+    font-family: var(--font-mono);
+    font-weight:500;
+    white-space:nowrap;
+  }
+  .line.muted .val{ color: var(--ink-soft); }
+
+  .stamp-box{
+    margin: 20px 4px 22px;
+    display:flex;
+    justify-content:center;
+  }
+  .stamp{
+    border: 3px double var(--stamp);
+    color: var(--stamp);
+    padding: 12px 26px;
+    transform: rotate(-2.5deg);
+    text-align:center;
+    border-radius: 4px;
+    background: rgba(176,58,46,.04);
+  }
+  .stamp .label{
+    font-size:.8rem;
+    letter-spacing:.04em;
+    margin-bottom:4px;
+  }
+  .stamp .num{
+    font-family: var(--font-mono);
+    font-size:1.6rem;
+    font-weight:700;
+  }
+
+  .gap-note{
+    font-size:.86rem;
+    color: var(--ink-soft);
+    line-height:1.7;
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-left: 3px solid var(--brass);
+    background: rgba(140,110,51,.06);
+  }
+
+  .verdict{
+    margin-top:14px;
+    padding: 12px 14px;
+    border: 1px solid var(--rule-strong);
+    font-size:.92rem;
+    line-height:1.7;
+  }
+  .verdict.pos{ border-color: var(--forest); color: var(--forest); background: rgba(44,107,69,.06); }
+  .verdict.neg{ border-color: var(--stamp); color: var(--stamp); background: rgba(176,58,46,.05); }
+
+  footer.footnote{
+    margin-top: 26px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--rule-strong);
+    font-size:.78rem;
+    color: var(--ink-soft);
+    line-height:1.8;
+  }
+
+  @media (max-width: 480px){
+    body{ padding: 28px 8px 60px; }
+    .sheet{ padding: 30px 18px 24px; }
+    .row{ flex-direction:column; align-items:flex-start; gap:6px; }
+    input[type="number"], input[type="text"]{ width:100%; text-align:left; }
+    select{ width:100%; }
+    .field{ width:100%; justify-content:space-between; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sheet-wrap">
+  <div class="perf top"></div>
+  <div class="sheet">
+
+    <header class="masthead">
+      <h1>損益平衡點計算機</h1>
+      <p>手續費多半是「月退」——券商當下不打折，退佣要等到月底才入帳。所以下單 App 當下顯示的損益，其實比你實際上（把之後會退回來的錢算進去）多虧了一點、少賺了一點。這裡幫你算出兩種打平價的差距。</p>
+    </header>
+
+    <form id="calc">
+      <fieldset>
+        <legend>買進資訊</legend>
+        <div class="row">
+          <label for="shares">買進股數</label>
+          <div class="field"><input type="number" id="shares" value="1000" min="1" step="1"><span class="unit">股</span></div>
+        </div>
+        <div class="row">
+          <label for="buyPrice">買進成交價</label>
+          <div class="field"><input type="number" id="buyPrice" value="100" min="0" step="0.01"><span class="unit">元</span></div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>費用與稅率設定</legend>
+        <div class="row">
+          <label for="feeRate">手續費率<span class="hint">買、賣雙邊通常相同</span></label>
+          <div class="field"><input type="number" id="feeRate" value="0.1425" min="0" step="0.0001"><span class="unit">%</span></div>
+        </div>
+        <div class="row">
+          <label for="rebate">手續費月退比例<span class="hint">券商每月退還的手續費折數</span></label>
+          <div class="field"><input type="number" id="rebate" value="30" min="0" max="100" step="1"><span class="unit">%</span></div>
+        </div>
+        <div class="row">
+          <label for="minFeeVal">
+            <span class="checkline"><input type="checkbox" id="minFeeOn"> 設定最低手續費</span>
+            <span class="hint">多數線上下單已無低消，若有請勾選</span>
+          </label>
+          <div class="field"><input type="number" id="minFeeVal" value="20" min="0" step="1" disabled><span class="unit">元</span></div>
+        </div>
+        <div class="row">
+          <label for="taxType">證交稅率</label>
+          <div class="field">
+            <select id="taxType">
+              <option value="0.3">一般股票賣出 0.3%</option>
+              <option value="0.15">股票當沖賣出 0.15%</option>
+              <option value="0.1">ETF 賣出 0.1%</option>
+              <option value="custom">自訂…</option>
+            </select>
+          </div>
+        </div>
+        <div class="row" id="customTaxRow" style="display:none;">
+          <label for="customTax">自訂稅率</label>
+          <div class="field"><input type="number" id="customTax" value="0.3" min="0" step="0.01"><span class="unit">%</span></div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>目前市價（選填，比對用）</legend>
+        <div class="row">
+          <label for="currentPrice">目前市價<span class="hint">留空則只看打平價</span></label>
+          <div class="field"><input type="number" id="currentPrice" step="0.01" placeholder="—"><span class="unit">元</span></div>
+        </div>
+      </fieldset>
+    </form>
+
+    <section class="results">
+      <h2>試算結果</h2>
+
+      <div class="line">
+        <span>App 上顯示的打平價<span class="hint">未把月退算進去，看起來要漲比較多才回本</span></span>
+        <span class="val" id="outAppBE">—</span>
+      </div>
+
+      <div class="stamp-box">
+        <div class="stamp">
+          <div class="label">實際打平價（含月退認列）</div>
+          <div class="num" id="outRealBE">—</div>
+        </div>
+      </div>
+
+      <div class="line muted">
+        <span>兩者差距</span>
+        <span class="val" id="outDiff">—</span>
+      </div>
+
+      <div id="compareBlock" style="display:none;">
+        <div class="line">
+          <span>以目前市價計算：App 顯示損益</span>
+          <span class="val" id="outAppPnl">—</span>
+        </div>
+        <div class="line">
+          <span>以目前市價計算：實際損益（含月退）</span>
+          <span class="val" id="outRealPnl">—</span>
+        </div>
+        <div class="gap-note" id="outGapNote"></div>
+        <div class="verdict" id="outVerdict"></div>
+      </div>
+    </section>
+
+    <footer class="footnote">
+      試算採「有效手續費 = 手續費 ×（1 − 月退比例）」估算，把尚未入帳的月退視為已實現。當沖交易的證交稅減半僅適用於證交稅，手續費本身不因當沖而打折。實際打平價會因券商牌告費率、低消門檻、退佣認列時間點而有落差，下單前仍請以券商當下試算為準。
+    </footer>
+
+  </div>
+  <div class="perf bottom"></div>
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+
+  const els = {
+    shares: $('shares'), buyPrice: $('buyPrice'),
+    feeRate: $('feeRate'), rebate: $('rebate'),
+    minFeeOn: $('minFeeOn'), minFeeVal: $('minFeeVal'),
+    taxType: $('taxType'), customTax: $('customTax'), customTaxRow: $('customTaxRow'),
+    currentPrice: $('currentPrice')
+  };
+
+  function feeGross(amount, feeRate, minFee, useMin){
+    // 台股手續費實際上是無條件捨去到元
+    let f = Math.floor(amount * feeRate);
+    if(useMin) f = Math.max(f, minFee);
+    return f;
+  }
+
+  function taxAmt(amount, taxRate){
+    // 證交稅同樣無條件捨去到元
+    return Math.floor(amount * taxRate);
+  }
+
+  function buildCtx(){
+    const shares = Math.max(0, parseFloat(els.shares.value) || 0);
+    const buyPrice = Math.max(0, parseFloat(els.buyPrice.value) || 0);
+    const feeRate = (parseFloat(els.feeRate.value) || 0) / 100;
+    const rebate = Math.min(1, Math.max(0, (parseFloat(els.rebate.value) || 0) / 100));
+    const useMin = els.minFeeOn.checked;
+    const minFee = Math.max(0, parseFloat(els.minFeeVal.value) || 0);
+    const taxRate = (els.taxType.value === 'custom'
+      ? (parseFloat(els.customTax.value) || 0)
+      : parseFloat(els.taxType.value)) / 100;
+
+    const buyAmt = shares * buyPrice;
+    const buyFeeGross = feeGross(buyAmt, feeRate, minFee, useMin);
+    const buyFeeNet = buyFeeGross * (1 - rebate);
+
+    return { shares, buyPrice, feeRate, rebate, useMin, minFee, taxRate, buyAmt, buyFeeGross, buyFeeNet };
+  }
+
+  function appPnL(sellPrice, ctx){
+    const sellAmt = ctx.shares * sellPrice;
+    const sellFee = feeGross(sellAmt, ctx.feeRate, ctx.minFee, ctx.useMin);
+    const tax = taxAmt(sellAmt, ctx.taxRate);
+    return sellAmt - sellFee - tax - ctx.buyAmt - ctx.buyFeeGross;
+  }
+
+  function actualPnL(sellPrice, ctx){
+    const sellAmt = ctx.shares * sellPrice;
+    const sellFeeGross = feeGross(sellAmt, ctx.feeRate, ctx.minFee, ctx.useMin);
+    const sellFeeNet = sellFeeGross * (1 - ctx.rebate);
+    const tax = taxAmt(sellAmt, ctx.taxRate);
+    return sellAmt - sellFeeNet - tax - ctx.buyAmt - ctx.buyFeeNet;
+  }
+
+  function solve(fn, ctx){
+    let lo = 0, hi = Math.max(ctx.buyPrice * 3, 10);
+    let guard = 0;
+    while(fn(hi, ctx) < 0 && guard < 60){ hi *= 1.8; guard++; }
+    for(let i=0;i<90;i++){
+      const mid = (lo+hi)/2;
+      if(fn(mid, ctx) > 0) hi = mid; else lo = mid;
+    }
+    return (lo+hi)/2;
+  }
+
+  function money(n){
+    if(!isFinite(n)) return '—';
+    return n.toLocaleString('zh-TW', {maximumFractionDigits: 2, minimumFractionDigits: 0});
+  }
+  function price(n){
+    if(!isFinite(n)) return '—';
+    return n.toLocaleString('zh-TW', {maximumFractionDigits: 2, minimumFractionDigits: 2});
+  }
+  function signed(n){
+    const s = n >= 0 ? '+' : '';
+    return s + money(Math.round(n));
+  }
+
+  function render(){
+    const ctx = buildCtx();
+    if(ctx.shares <= 0 || ctx.buyPrice <= 0){
+      $('outAppBE').textContent = '—';
+      $('outRealBE').textContent = '—';
+      $('outDiff').textContent = '—';
+      $('compareBlock').style.display = 'none';
+      return;
+    }
+
+    const appBE = solve(appPnL, ctx);
+    const realBE = solve(actualPnL, ctx);
+    const diff = appBE - realBE;
+    const diffPct = realBE ? (diff / realBE * 100) : 0;
+
+    $('outAppBE').textContent = price(appBE) + ' 元';
+    $('outRealBE').textContent = price(realBE) + ' 元';
+    $('outDiff').textContent = 'App 顯示的打平價比實際高 ' + price(Math.max(diff,0)) + ' 元（約 ' + diffPct.toFixed(2) + '%）';
+
+    const cp = parseFloat(els.currentPrice.value);
+    if(!isNaN(cp) && cp > 0){
+      $('compareBlock').style.display = '';
+      const a = appPnL(cp, ctx);
+      const r = actualPnL(cp, ctx);
+      const gap = r - a;
+
+      $('outAppPnl').textContent = signed(a) + ' 元';
+      $('outRealPnl').textContent = signed(r) + ' 元';
+      $('outGapNote').textContent = '兩者差 ' + money(Math.round(gap)) + ' 元，是還沒入帳、但之後月退會拿回來的手續費差額。';
+
+      const verdictEl = $('outVerdict');
+      if(a < 0 && r >= 0){
+        verdictEl.className = 'verdict pos';
+        verdictEl.textContent = 'App 上目前顯示是虧損，但把月退算進去，其實已經打平或小賺了，不用被那個數字嚇到。';
+      } else if(r >= 0){
+        verdictEl.className = 'verdict pos';
+        verdictEl.textContent = '以目前市價來看，實際上已經過了打平點。';
+      } else {
+        verdictEl.className = 'verdict neg';
+        verdictEl.textContent = '就算把月退算進去，目前市價仍未到達打平點，還差 ' + price(realBE - cp) + ' 元。';
+      }
+    } else {
+      $('compareBlock').style.display = 'none';
+    }
+  }
+
+  els.taxType.addEventListener('change', function(){
+    els.customTaxRow.style.display = els.taxType.value === 'custom' ? '' : 'none';
+    render();
+  });
+  els.minFeeOn.addEventListener('change', function(){
+    els.minFeeVal.disabled = !els.minFeeOn.checked;
+    render();
+  });
+
+  Object.values(els).forEach(el => {
+    if(!el) return;
+    el.addEventListener('input', render);
+  });
+
+  render();
+})();
+</script>
+
+</body>
+</html>
